@@ -8,10 +8,16 @@ def judge_node(state: ResearchState) -> dict:
     return {"spoiler_check": judge_spoilers(state["report"])}
 
 
-def route_after_judge(state: ResearchState) -> str:
-    if state["spoiler_check"].strip() == "NONE":
-        return "finish"
+MAX_WRITES = 3
 
+
+def route_after_judge(state: ResearchState) -> str:
+    verdict = state["spoiler_check"].strip().upper()
+    if verdict.startswith("NONE"):
+        return "finish"
+    if state.get("revisions", 0) >= MAX_WRITES:
+        print("Giving up after", MAX_WRITES, "drafts. Spoilers may remain.")
+        return "finish"
     return "revise"
 
 
@@ -40,11 +46,17 @@ graph = builder.compile()
 
 
 if __name__ == "__main__":
-    result = graph.invoke({"question": "Frieren: Beyond Journey's End"})
+    result = None
+    for state in graph.stream(
+        {"question": "Frieren: Beyond Journey's End"}, stream_mode="values"
+    ):
+        print(
+            "revisions so far:",
+            state.get("revisions", 0),
+            "| has report:",
+            "report" in state,
+        )
+        result = state
 
     print(result["report"])
-
-    used, invented = check_citations(result["report"], result["sources"])
-
-    print("\nInvented citations:", sorted(invented) or "none")
     print("Spoiler check:", result["spoiler_check"])

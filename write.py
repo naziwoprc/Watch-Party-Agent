@@ -38,7 +38,8 @@ Rules:
 - NEVER mention plot events, arcs, episodes, battles, villains, character fates, or twists. Describe themes, tone, visuals, music and audience reaction only.
 - Put ratings, rankings and release facts only under Trivia. "Why fans love it" is for what people enjoy, not for statistics.
 - If the sources do not support a section, write "Not enough info found." Do not guess.
-- Do not cite an ID that is not in the list."""
+- Do not cite an ID that is not in the list.
+- Copy numbers, ratings and dates exactly as written in the source. Never round or convert them."""
 
 JUDGE_PROMPT = """You are a spoiler checker.
 
@@ -62,6 +63,13 @@ def write_node(state: ResearchState) -> dict:
     prompt = WRITE_PROMPT.format(
         title=state["question"], sources=format_sources(state["sources"])
     )
+    feedback = state.get("spoiler_check", "")
+    if feedback and not feedback.strip().startswith("NONE"):
+        prompt += (
+            "\n\nYour previous draft was rejected because it contains spoilers:\n"
+            f"{feedback}\n\nPrevious draft:\n{state['report']}\n\n"
+            "Rewrite the full brief and remove every spoiler listed above."
+        )
     reply = writer_llm.invoke(prompt)
     finish = (reply.response_metadata or {}).get("finish_reason")
     if not reply.content or finish == "length":
@@ -69,7 +77,7 @@ def write_node(state: ResearchState) -> dict:
             f"Writer failed (finish_reason={finish!r}). Raise the token limit or change model."
         )
 
-    return {"report": reply.content}
+    return {"report": reply.content, "revisions": state.get("revisions", 0) + 1}
 
 
 def check_citations(report: str, sources: list[dict]):
@@ -80,6 +88,15 @@ def check_citations(report: str, sources: list[dict]):
 
 def judge_spoilers(report: str) -> str:
     return writer_llm.invoke(JUDGE_PROMPT.format(report=report)).content
+
+
+def check_numbers(report: str, sources: list[dict]) -> list[str]:
+    seen = " ".join(s["snippet"][:600] for s in sources)
+    body = re.sub(r"\[S\d+\]", "", report)
+    nums = set(re.findall(r"\d+(?:\.\d+)?", body))
+    return sorted(
+        n for n in nums if not re.search(rf"(?<![\d.]){re.escape(n)}(?!\d)", seen)
+    )
 
 
 if __name__ == "__main__":

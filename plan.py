@@ -13,6 +13,7 @@ class ResearchState(TypedDict):
     sources: list[dict]
     report: str
     spoiler_check: str
+    revisions: int
 
 
 llm = ChatNVIDIA(
