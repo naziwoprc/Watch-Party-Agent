@@ -21,10 +21,20 @@ def search_node(state: ResearchState) -> dict:
         except Exception as e:
             print(f"search failed for {query!r}: {e}")
             continue
+
         for r in response["results"]:
             if r["url"] in seen_urls:
                 continue
+            score = r.get("score", 1)
+            if len(r["content"]) < 200 or score < 0.1:
+                print(
+                    f"  skipped  score={score:.2f} len={len(r['content'])}  {r['title'][:50]}"
+                )
+                continue
             seen_urls.add(r["url"])
+            print(
+                f"  kept     score={score:.2f} len={len(r['content'])}  {r['title'][:50]}"
+            )
             sources.append(
                 {
                     "id": f"S{len(sources) + 1}",
@@ -34,6 +44,7 @@ def search_node(state: ResearchState) -> dict:
                     "query": query,
                 }
             )
+
     return {"sources": sources}
 
 

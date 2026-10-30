@@ -1,8 +1,7 @@
 import re
 from typing import TypedDict
 from dotenv import load_dotenv
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
-import time
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -16,11 +15,10 @@ class ResearchState(TypedDict):
     revisions: int
 
 
-llm = ChatNVIDIA(
-    model="minimaxai/minimax-m3.1-flash",
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
     temperature=0,
-    max_completion_tokens=1024,
-    timeout=600,
+    max_tokens=4096,
 )
 
 PLAN_PROMPT = """You are researching a title for a group of friends

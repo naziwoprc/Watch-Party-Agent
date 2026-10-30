@@ -1,61 +1,90 @@
-# Watch Party Research Agent
+# Watch Party Research Agent 🎬
 
-An AI-powered research agent that explores movies, anime, TV shows, and other entertainment titles, then generates a spoiler-conscious watch party brief with source citations and recommendations.
+An LLM-powered research agent that explores movies, anime, TV shows, and other entertainment titles to generate spoiler-conscious watch party briefs backed by web research and source citations.
 
-## Features
+Built with **Python, LangGraph, Groq, and Tavily**, the project explores multi-step LLM workflows, automated research planning, evidence-based content generation, and iterative output validation.
 
-- **Automated research planning:** Generates five targeted web search queries.
-- **Web search:** Uses Tavily to collect relevant search results.
-- **Audience insights:** Researches fan reception, common criticisms, and audience preferences.
-- **Behind-the-scenes trivia:** Looks for interesting facts and details.
-- **Recommendations:** Suggests similar titles found in the research sources.
-- **Source citations:** Associates report claims with collected sources.
-- **Spoiler checking:** Uses an LLM-based judge to identify potential spoilers.
-- **Graph-based workflow:** Orchestrates the pipeline with LangGraph.
+## ✨ Features
 
-## Architecture
+- **Automated Research Planning:** Generates five targeted search queries covering audience reception, fan opinions, criticism, trivia, and similar titles.
+- **Web Research:** Uses Tavily Search API to retrieve and collect relevant web sources.
+- **Source Filtering:** Deduplicates URLs and filters results based on content length and search relevance scores.
+- **Audience Insights:** Researches positive reception, criticisms, and differing opinions.
+- **Behind-the-Scenes Trivia:** Searches for interesting facts and additional details.
+- **Similar Title Recommendations:** Identifies recommendations explicitly supported by the retrieved sources.
+- **Citation Normalization:** Standardizes citation formats before validation.
+- **Citation Validation:** Checks whether referenced source IDs exist.
+- **Claim Verification:** Uses an LLM-based evaluator to assess whether individual claims are supported by their cited evidence.
+- **Numerical Fact Checking:** Flags numbers in the generated report that cannot be found in the retrieved source text.
+- **Spoiler Detection:** Uses a separate LLM-based judge to identify potential spoilers and content that violates the brief's spoiler restrictions.
+- **Conditional Revision Loop:** Routes rejected drafts back to the writer, with a configurable maximum number of drafts.
 
-The current workflow consists of four nodes:
+## 🏗️ Architecture
 
-1. **Plan** — Generates research queries for the requested title.
-2. **Search** — Collects and deduplicates results using Tavily.
-3. **Write** — Produces a Markdown watch party brief grounded in the collected sources.
-4. **Judge** — Checks the generated report for potential spoilers.
+The project uses LangGraph to orchestrate a multi-step research workflow.
+
+### Workflow
 
 ```text
-User Input
-    |
-    v
-   Plan
-    |
-    v
-  Search
-    |
-    v
-   Write
-    |
-    v
-   Judge
-    |
-    v
- Markdown Report
+             User Input
+                 |
+                 v
+              Planner
+                 |
+                 v
+               Search
+                 |
+                 v
+               Writer
+                 |
+                 v
+                Judge
+                 |
+           Conditional
+              Routing
+             /       \
+            /         \
+      Spoiler       No Spoiler
+       Found             |
+         |               v
+         v             Finish
+       Writer
+         |
+         v
+        Judge
 ```
 
-## Tech Stack
+### Workflow Components
 
-- Python
-- LangGraph
-- NVIDIA AI Endpoints
-- MiniMax M3.1 Flash model endpoint
-- Tavily Search API
-- python-dotenv
+| Component              | Responsibility                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| **Planner**            | Generates five targeted search queries using an LLM.                           |
+| **Search**             | Retrieves, filters, and deduplicates sources through Tavily.                   |
+| **Writer**             | Generates a structured Markdown brief using retrieved evidence.                |
+| **Judge**              | Evaluates the report for potential spoilers.                                   |
+| **Conditional Router** | Determines whether the report should be revised or the workflow should finish. |
 
-## Installation
+The revision loop is bounded to prevent endless regeneration.
+
+Additional validation functions evaluate citation IDs, numerical claims, and individual claim-to-source support after the graph completes.
+
+## 🛠️ Tech Stack
+
+- **Language:** Python
+- **Workflow Orchestration:** LangGraph
+- **LLM Integration:** LangChain Groq
+- **Writer Model:** `openai/gpt-oss-120b`
+- **Judge Model:** `openai/gpt-oss-20b`
+- **Web Search:** Tavily Search API
+- **Environment Management:** python-dotenv
+
+## 🚀 Installation
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/YOUR-USERNAME/watch-party-research-agent.git
+
 cd watch-party-research-agent
 ```
 
@@ -79,49 +108,83 @@ python -m pip install -r requirements.txt
 
 ### 4. Configure environment variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project's root directory:
 
 ```env
-NVIDIA_API_KEY=your_nvidia_api_key
+GROQ_API_KEY=your_groq_api_key
 TAVILY_API_KEY=your_tavily_api_key
 ```
 
-Use your actual API keys locally. Never commit your `.env` file.
+Obtain your API keys from:
 
-## Usage
+- [Groq Console](https://console.groq.com/keys)
+- [Tavily](https://tavily.com/)
 
-Run the graph:
+**Important:** Never commit your `.env` file or expose your API keys publicly.
+
+## ▶️ Usage
+
+Run the LangGraph workflow:
 
 ```bash
 python graph.py
 ```
 
-The current example researches:
+The current example uses:
 
-`Frieren: Beyond Journey's End`
+```python
+{"question": "OK Computer (Radiohead)"}
+```
 
-The workflow prints a Markdown report, citation-validation results, and the spoiler check.
+You can change the title in `graph.py` to research another movie, anime, TV show, album, or other entertainment title.
 
-## Current Limitations
+The workflow generates a Markdown report and prints validation results, including:
 
-- Search results are primarily evaluated using their titles and snippets.
-- Citation validation checks source IDs but does not establish that every claim is supported by its cited source.
-- Spoiler checking is an LLM-based check and is not guaranteed to detect every spoiler.
-- The current graph does not automatically revise reports that fail the spoiler check.
-- The project currently uses a predefined research workflow rather than an interactive user interface.
+- Spoiler-check verdict
+- Citation validation results
+- Numerical claims not found in source text
+- Claims flagged by the evidence evaluator
 
-## Roadmap
+## 📄 Example Output
 
-- [ ] Improve citation coverage and evidence verification.
-- [ ] Add conditional routing and bounded report revision.
-- [ ] Improve search-result quality and error handling.
-- [ ] Add automated tests.
-- [ ] Add a user interface.
-- [ ] Improve recommendations using user preferences.
-- [ ] Add structured output validation.
+The generated brief contains five sections:
 
-## Project Status
+1. **The Pitch** — A short introduction focusing on tone and themes.
+2. **Why Fans Love It** — Positive opinions supported by sources.
+3. **What Divides People** — Explicitly documented disagreements and criticisms.
+4. **Trivia** — Interesting facts and relevant statistics.
+5. **If You Liked This, Try** — Similar titles explicitly recommended by retrieved sources.
 
-First draft — an ongoing personal AI engineering project.
+All factual bullet points are expected to include source citations.
 
-Built to explore LLM-based research workflows, web search, and graph-based orchestration.
+## ⚠️ Current Limitations
+
+This project is still under development. Some limitations include:
+
+- Search quality depends on Tavily's retrieved results.
+- Source filtering uses basic relevance and content-length thresholds.
+- Citation validation checks source IDs, but does not independently prove that every citation supports its claim.
+- Claim verification relies on an LLM and can produce incorrect evaluations.
+- Numerical validation uses text matching and does not establish full factual accuracy.
+- Spoiler detection is probabilistic and cannot guarantee that every spoiler will be identified.
+- The revision loop currently focuses on spoiler feedback rather than all validation failures.
+- The workflow uses a predefined research process and does not yet provide an interactive user interface.
+
+## 🗺️ Roadmap
+
+- [ ] Improve source relevance and retrieval quality.
+- [ ] Strengthen citation and evidence verification.
+- [ ] Improve spoiler detection and revision feedback.
+- [ ] Add automated tests with pytest.
+- [ ] Introduce structured output validation.
+- [ ] Add more comprehensive error handling and API retries.
+- [ ] Integrate validation results into conditional graph routing.
+- [ ] Build an interactive user interface.
+- [ ] Add customizable research preferences.
+- [ ] Improve recommendation relevance and evaluation.
+
+## 📌 Project Status
+
+**Active Development — First Functional Version**
+
+This is an ongoing personal AI engineering project exploring LLM-powered research, retrieval, evidence-grounded generation, validation, and graph-based workflow orchestration.

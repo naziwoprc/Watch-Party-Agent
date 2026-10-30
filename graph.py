@@ -1,7 +1,13 @@
 from langgraph.graph import StateGraph, START, END
 from plan import ResearchState, plan_node
 from search import search_node
-from write import write_node, check_citations, judge_spoilers
+from write import (
+    write_node,
+    check_citations,
+    judge_spoilers,
+    check_numbers,
+    check_claims,
+)
 
 
 def judge_node(state: ResearchState) -> dict:
@@ -46,9 +52,10 @@ graph = builder.compile()
 
 
 if __name__ == "__main__":
+    SHOW_SOURCES = False
     result = None
     for state in graph.stream(
-        {"question": "Frieren: Beyond Journey's End"}, stream_mode="values"
+        {"question": "OK Computer (Radiohead)"}, stream_mode="values"
     ):
         print(
             "revisions so far:",
@@ -60,3 +67,20 @@ if __name__ == "__main__":
 
     print(result["report"])
     print("Spoiler check:", result["spoiler_check"])
+    print(
+        "Numbers not found in sources:",
+        check_numbers(result["report"], result["sources"]) or "none",
+    )
+    used, invented = check_citations(result["report"], result["sources"])
+    print("Invented citations:", sorted(invented) or "none")
+
+    if SHOW_SOURCES:
+        for s in result["sources"]:
+            text = (s["title"] + " " + s["snippet"]).lower()
+            if "absurd" in text:
+                print("Mentions 'absurd':", s["id"], s["title"])
+
+    flags = check_claims(result["report"], result["sources"])
+    print(f"\nClaim check: {len(flags)} bullet(s) flagged")
+    for claim, verdict in flags:
+        print("FLAGGED:", claim, "->", verdict)
